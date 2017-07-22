@@ -1,4 +1,5 @@
 var request = require('request');
+var crypto = require('../crypto');
 
 var CloudService = function CloudService(host, port) {
   this.host = host;
@@ -41,33 +42,45 @@ CloudService.prototype.createUser = function createUser(credentials, done) {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     },
-    form: { type: 'user', user: { email: credentials.email, password: credentials.password } }
-  }, function onResponse(err, response, body) {
-    var user;
-    var bodyJson;
-
-    if (err) {
-      done(err);
-    } else {
-      try {
-        bodyJson = JSON.parse(body);
-        if (!bodyJson.user) {
-          // if there is no user field so it is an error response
-          done(bodyJson);
-        } else {
-          user = {
-            email: bodyJson.user.email,
-            password: bodyJson.user.password,
-            uuid: bodyJson.uuid,
-            token: bodyJson.token
-          };
-          done(null, user);
-        }
-      } catch (parseErr) {
-        done(parseErr);
+    form: {
+      type: 'user',
+      user: {
+        email: credentials.email,
+        password: credentials.password,
+        passwordHash: credentials.passwordHash
       }
     }
-  });
+  }, (function (password) {
+    return function onResponse(err, response, body) {
+      var user;
+      var bodyJson;
+
+      if (err) {
+        done(err);
+      } else {
+        try {
+          bodyJson = JSON.parse(body);
+          if (!bodyJson.user) {
+            // if there is no user field so it is an error response
+            done(bodyJson);
+          } else {
+            user = {
+              email: bodyJson.user.email,
+              password: bodyJson.user.password,
+              uuid: bodyJson.uuid,
+              token: bodyJson.token
+            };
+            if (!user.token && bodyJson.user.token) {
+              user.token = crypto.decrypt(bodyJson.user.token, password);
+            }
+            done(null, user);
+          }
+        } catch (parseErr) {
+          done(parseErr);
+        }
+      }
+    };
+  }(credentials.password)));
 };
 
 module.exports = {

@@ -9,6 +9,8 @@ var SALT_PASSWORD_HASH_SEPARATOR = '|';
 var INPUT_ENCODING = 'utf8';
 var OUTPUT_ENCODING = 'hex';
 
+var CRYPT_ALGORITHM = 'aes-256-ctr';
+
 var createPasswordHash = function createPasswordHash(password) {
   var saltBuffer = crypto.randomBytes(SALT_LENGTH);
   var passwordBuffer = Buffer.from(password, INPUT_ENCODING);
@@ -46,8 +48,16 @@ var createTokenSecret = function createTokenSecret() {
   return crypto.randomBytes(32).toString('hex');
 };
 
+var decrypt = function decrypt(text, password) {
+  var decipher = crypto.createDecipher(CRYPT_ALGORITHM, password);
+  var dec = decipher.update(text, 'hex', 'utf8');
+  dec += decipher.final('utf8');
+  return dec;
+};
+
 module.exports = {
   createPasswordHash: createPasswordHash,
   isPasswordValid: isPasswordValid,
-  createTokenSecret: createTokenSecret
+  createTokenSecret: createTokenSecret,
+  decrypt: decrypt
 };
