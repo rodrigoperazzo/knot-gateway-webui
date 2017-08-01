@@ -22,53 +22,81 @@ var create = function create(req, res) {
         if (errCreateUser) {
           res.status(500).send(errCreateUser);
         } else {
-          cloudSvc.createGateway(user.uuid, function onGatewayCreated(errCreateGateway, gateway) {
-            if (errCreateGateway) {
-              res.status(500).send(errCreateGateway);
-            } else {
-              users.setUser(user, function onUserSet(errSetUser) {
-                var knotSvc;
-                if (errSetUser) {
-                  res.sendStatus(500);
-                } else {
-                  knotSvc = new KnotService();
-                  knotSvc.setUserCredentials(user, function onUserCredentialsSet(errSetUserCredentials) { // eslint-disable-line max-len
-                    if (errSetUserCredentials) {
-                      res.sendStatus(500);
-                    } else {
-                      fogs.setFogSettings(gateway, function onFogSet(errSetFog) {
-                        var fogSvc;
-                        if (errSetFog) {
-                          res.sendStatus(500);
-                        } else {
-                          fogSvc = new FogService();
-                          fogSvc.setGatewayCredentials(gateway, function onGwCredentialsSet(errSetGwCredentials) { // eslint-disable-line max-len
-                            if (errSetGwCredentials) {
-                              res.sendStatus(500);
-                            } else {
-                              fogSvc.restart(function onRestart(errRestart) {
-                                if (errRestart) {
-                                  // don't fail if fog daemon isn't restarted
-                                  console.error('Error restarting KNoT Fog: ', errRestart);
-                                }
-                              });
-                              res.end();
-                            }
-                          });
-                        }
-                      });
-                    }
-                  });
-                }
-              });
-            }
-          });
+          createGateway(res, cloudSvc, user);
         }
       });
     }
   });
 };
 
+var newGateway = function newGateway(req, res) {
+  clouds.getCloudSettings(function onCloudSettingsSet(errGetCloud, cloud) {
+    var cloudSvc;
+    var credentials;
+    if (errGetCloud || !cloud) {
+      res.sendStatus(400);
+    } else {
+      credentials = {
+        uuid: req.body.uuid,
+        token: req.body.token
+      };
+      cloudSvc = new CloudService(cloud.servername, cloud.port);
+      cloudSvc.getUser(credentials, function onUserRetrieved(errGetUser, user) {
+        if (errGetUser) {
+          res.status(500).send(errGetUser);
+        } else {
+          createGateway(res, cloudSvc, user);
+        }
+      });
+    }
+  });
+};
+
+var createGateway = function createGateway(res, cloudSvc, user) {
+    cloudSvc.createGateway(user.uuid, function onGatewayCreated(errCreateGateway, gateway) {
+      if (errCreateGateway) {
+        res.status(500).send(errCreateGateway);
+      } else {
+        users.setUser(user, function onUserSet(errSetUser) {
+          var knotSvc;
+          if (errSetUser) {
+            res.sendStatus(500);
+          } else {
+            knotSvc = new KnotService();
+            knotSvc.setUserCredentials(user, function onUserCredentialsSet(errSetUserCredentials) { // eslint-disable-line max-len
+              if (errSetUserCredentials) {
+                res.sendStatus(500);
+              } else {
+                fogs.setFogSettings(gateway, function onFogSet(errSetFog) {
+                  var fogSvc;
+                  if (errSetFog) {
+                    res.sendStatus(500);
+                  } else {
+                    fogSvc = new FogService();
+                    fogSvc.setGatewayCredentials(gateway, function onGwCredentialsSet(errSetGwCredentials) { // eslint-disable-line max-len
+                      if (errSetGwCredentials) {
+                        res.sendStatus(500);
+                      } else {
+                        fogSvc.restart(function onRestart(errRestart) {
+                          if (errRestart) {
+                            // don't fail if fog daemon isn't restarted
+                            console.error('Error restarting KNoT Fog: ', errRestart);
+                          }
+                        });
+                        res.end();
+                      }
+                    });
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+}
+
 module.exports = {
-  create: create
+  create: create,
+  newGateway: newGateway
 };

@@ -65,6 +65,33 @@ appCtrls.controller('SignupController', function ($scope, $state, $http, SignupS
   };
 });
 
+appCtrls.controller('NewGatewayController', function ($rootScope, $scope, $location, $state, SignupService) {
+  $scope.hideButton = false;
+  $scope.newGateway = function () {
+    var userData = {
+      uuid: $scope.form.uuid,
+      token: $scope.form.token,
+    };
+    $scope.hideButton = true;
+    SignupService.newGateway(userData)
+      .then(function onSuccess(/* result */) {
+        alert('The gateway was registered successfully');
+        $scope.hideButton = false;
+        $state.go('app.admin');
+      }, function onError(err) {
+        console.log(err);
+        if (err.status === 400) {
+          $state.go('cloud');
+        } else if (err.status === 500) {
+          alert('Cloud may not be running, try again later');
+        } else {
+          alert(err.data.message);
+        }
+        $scope.hideButton = false;
+    });
+  }
+});
+
 appCtrls.controller('AdminController', function ($rootScope, $scope, $location, $state, AppService) {
   $scope.init = function () {
     AppService.loadAdmInfo()
@@ -164,7 +191,7 @@ appCtrls.controller('RebootController', function ($scope, $location, $interval, 
   };
 });
 
-appCtrls.controller('CloudController', function ($scope, $state, AppService) {
+appCtrls.controller('CloudController', function ($scope, $state, AppService, previousState) {
   var formData = {
     servername: null,
     port: null
@@ -193,7 +220,7 @@ appCtrls.controller('CloudController', function ($scope, $state, AppService) {
       .then(function onSuccess(/* result */) {
         alert('Information saved');
         $scope.hideButton = false;
-        $state.go('signup');
+        $state.go(previousState);
       }, function onError(err) {
         alert(err.data.message);
         $scope.hideButton = false;

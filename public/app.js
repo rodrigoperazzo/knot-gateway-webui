@@ -39,6 +39,11 @@ app.config(function config($stateProvider, $urlRouterProvider, $httpProvider, RO
       template: require('./views/signup.html'),
       controller: 'SignupController'
     })
+    .state('gatewaynew', {
+      url: '/gateway/new',
+      template: require('./views/gateway.new.html'),
+      controller: 'NewGatewayController'
+    })
     .state('app', {
       abstract: true,
       template: require('./views/app.html'),
@@ -63,7 +68,12 @@ app.config(function config($stateProvider, $urlRouterProvider, $httpProvider, RO
     .state('cloud', {
       url: '/cloud',
       template: require('./views/cloud.html'),
-      controller: 'CloudController'
+      controller: 'CloudController',
+      resolve: {
+        previousState: function ($state) {
+          return $state.current.name;
+        }
+      }
     })
     .state('app.devices', {
       url: '/devices',

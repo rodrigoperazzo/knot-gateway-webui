@@ -70,6 +70,43 @@ CloudService.prototype.createUser = function createUser(credentials, done) {
   });
 };
 
+CloudService.prototype.getUser = function getUser(credentials, done) {
+  request({
+    url: 'http://' + this.host + ':' + this.port + '/devices/' + credentials.uuid,
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'meshblu_auth_uuid': credentials.uuid,
+      'meshblu_auth_token': credentials.token,
+    }
+  }, function onResponse(err, response, body) {
+    var user;
+    var bodyJson;
+
+    if (err) {
+      done(err);
+    } else {
+      try {
+        bodyJson = JSON.parse(body);
+        if (!bodyJson.devices[0].user) {
+          // if there is no user field so it is an error response
+          done(bodyJson);
+        } else {
+          user = {
+            email: bodyJson.devices[0].user.email,
+            password: bodyJson.devices[0].user.password,
+            uuid: bodyJson.devices[0].user.uuid,
+            token: bodyJson.devices[0].user.token
+          };
+          done(null, user);
+        }
+      } catch (parseErr) {
+        done(parseErr);
+      }
+    }
+  });
+};
+
 module.exports = {
   CloudService: CloudService
 };

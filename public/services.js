@@ -139,6 +139,19 @@ appServices.factory('SignupService', function ($http) {
     });
   };
 
+  signupFactory.newGateway = function newGateway(info) {
+    return $http({
+      method: 'POST',
+      url: '/api/gateway/new',
+      data: info,
+      config: {
+        headers: {
+          'Content-Type': 'application/json;charset=utf-8;'
+        }
+      }
+    });
+  };
+
   return signupFactory;
 });
 

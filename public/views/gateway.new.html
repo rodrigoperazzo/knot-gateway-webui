@@ -1,0 +1,15 @@
+<div align="center">
+  <img src="../img/knot_logo_green_background.png" class="round-image" />
+  <h2 class="banner">KNoT Gateway</h2>
+</div>
+<div>
+  <h2 class="banner small-font" align="center" >Setup new gateway for an existing account</h2>
+</div>
+<div align="center" class="container home-container">
+  <form class="form-home" ng-submit="newGateway()">
+    <input type="text" class="form-control" placeholder="UUID" ng-model="form.uuid" required>
+    <input type="text" class="form-control" placeholder="Token" ng-model="form.token" required>
+    <button class="btn btn-lg btn-primary btn-block" type="submit" ng-hide="hideButton">Setup new gateway</button>
+    <p ng-show="hideButton">Registering gateway...</p>
+  </form>
+</div>
