@@ -1,12 +1,19 @@
+var users = require('../models/users');
 var DevicesService = require('../services/devices').DevicesService;
 
 var list = function list(req, res, next) {
   var devicesSvc = new DevicesService();
-  devicesSvc.list(function onDevicesReturned(err, deviceList) {
-    if (err) {
-      next(err);
+  users.getUserByUUID(req.user.uuid, function onUser(userErr, user) {
+    if (userErr) {
+      next(userErr);
     } else {
-      res.json(deviceList);
+      devicesSvc.list(user, function onDevicesReturned(deviceErr, deviceList) {
+        if (deviceErr) {
+          next(deviceErr);
+        } else {
+          res.json(deviceList);
+        }
+      });
     }
   });
 };

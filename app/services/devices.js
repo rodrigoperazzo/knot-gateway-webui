@@ -1,8 +1,9 @@
-var fs = require('fs');
 var dbus = require('dbus-native');
 var config = require('config');
+var request = require('request');
 
-var DEVICES_FILE = config.get('nrfd.devicesFile');
+var FOG_HOST = config.get('fog.host');
+var FOG_PORT = config.get('fog.port');
 
 var DevicesServiceError = function DevicesServiceError(message) {
   this.name = 'DevicesServiceError';
@@ -19,23 +20,56 @@ var parseDbusError = function handleDbusError(err) { // eslint-disable-line vars
   return new DevicesServiceError('Devices service is unavailable');
 };
 
+var parseRequestError = function parseRequestError(err) { // eslint-disable-line vars-on-top
+  if (err.code === 'ECONNREFUSED' || err.code === 'EHOSTUNREACH'
+    || err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT') {
+    console.log('Error connecting to devices service (fog):', err); // eslint-disable-line no-console
+    return new DevicesServiceError('Devices service (fog) is unavailable');
+  }
+
+  return err;
+};
+
+var parseResponseError = function parseResponseError(response) { // eslint-disable-line vars-on-top
+  console.log('Unknown error while communicating with devices service (fog):', response); // eslint-disable-line no-console
+  return new DevicesServiceError('Unknown error');
+};
 
 var DevicesService = function DevicesService() { // eslint-disable-line vars-on-top
 };
 
-function getAllowedDevices(done) {
-  fs.readFile(DEVICES_FILE, 'utf8', function onRead(readErr, data) {
-    var file;
+function getAllowedDevices(user, done) {
+  request({
+    url: 'http://' + FOG_HOST + ':' + FOG_PORT + '/devices/',
+    qs: {
+      type: 'KNOTDevice',
+      owner: user.uuid
+    },
+    headers: {
+      meshblu_auth_uuid: user.uuid,
+      meshblu_auth_token: user.token
+    }
+  }, function onResponse(requestErr, response, body) {
+    var bodyJson;
+    var devicesFogErr;
 
-    if (readErr) {
-      done(readErr);
+    if (requestErr) {
+      devicesFogErr = parseRequestError(requestErr);
+      done(devicesFogErr);
       return;
     }
 
     try {
-      file = JSON.parse(data);
-
-      done(null, file.keys);
+      if (response.statusCode === 200) {
+        bodyJson = JSON.parse(body);
+        done(null, bodyJson.devices);
+      } else if (response.statusCode === 404) {
+        console.log('getAllowedDevices: No allowed devices found'); // eslint-disable-line no-console
+        done(null, []);
+      } else {
+        devicesFogErr = parseResponseError(response);
+        done(devicesFogErr);
+      }
     } catch (parseErr) {
       done(parseErr);
     }
@@ -81,7 +115,7 @@ function mergeDevicesLists(allowedList, nearbyList) {
   // allowed - nearby
   allowedList.forEach(function onEntry(device) {
     var deviceIdx = nearbyList.findIndex(function isSameDevice(nearbyDevice) {
-      return nearbyDevice.mac === device.mac;
+      return nearbyDevice.name === device.name;
     });
     if (deviceIdx !== -1) {
       nearbyList.splice(deviceIdx, 1);
@@ -92,8 +126,8 @@ function mergeDevicesLists(allowedList, nearbyList) {
   return allowedList.concat(nearbyList);
 }
 
-DevicesService.prototype.list = function list(done) {
-  getAllowedDevices(function onAllowedDevices(allowedDevicesErr, allowedDevices) {
+DevicesService.prototype.list = function list(user, done) {
+  getAllowedDevices(user, function onAllowedDevices(allowedDevicesErr, allowedDevices) {
     if (allowedDevicesErr) {
       done(allowedDevicesErr);
       return;
