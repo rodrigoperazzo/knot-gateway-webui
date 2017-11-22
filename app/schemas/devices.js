@@ -8,7 +8,9 @@ var update = {
       .required(),
     allowed: joi
       .bool()
-      .required()
+      .required(),
+    uuid: joi
+      .string()
   },
   params: {
     id: joi

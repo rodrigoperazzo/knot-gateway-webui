@@ -139,6 +139,32 @@ FogService.prototype.getDevices = function getDevices(user, done) {
   });
 };
 
+FogService.prototype.removeDevice = function removeDevice(user, uuid, done) {
+  request({
+    url: 'http://' + FOG_HOST + ':' + FOG_PORT + '/devices/' + uuid,
+    method: 'DELETE',
+    headers: {
+      meshblu_auth_uuid: user.uuid,
+      meshblu_auth_token: user.token
+    }
+  }, function onResponse(requestErr, response) {
+    var fogErr;
+
+    if (requestErr) {
+      fogErr = parseRequestError(requestErr);
+      done(fogErr);
+      return;
+    }
+
+    if (response.statusCode === 200) {
+      done(null);
+    } else {
+      fogErr = parseResponseError(response);
+      done(fogErr);
+    }
+  });
+};
+
 module.exports = {
   FogService: FogService
 };
