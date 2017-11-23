@@ -144,9 +144,11 @@ FogService.prototype.removeDevice = function removeDevice(user, uuid, done) {
     url: 'http://' + FOG_HOST + ':' + FOG_PORT + '/devices/' + uuid,
     method: 'DELETE',
     headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
       meshblu_auth_uuid: user.uuid,
       meshblu_auth_token: user.token
-    }
+    },
+    form: { token: user.token }
   }, function onResponse(requestErr, response) {
     var fogErr;
 
